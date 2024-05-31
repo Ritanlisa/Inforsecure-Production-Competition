@@ -109,6 +109,10 @@ def upload():
 
 @app.route("/patch/", methods=["POST", "GET"])
 def patch():
+    return render_template("./upload/fetch.html")
+
+@app.route("/bgn_fetch/", methods=["POST", "GET"])
+def bgn_fetch():
     url = 'http://192.168.16.53:8080'
     filename = '123.pcap'
     flag_patch = 1
@@ -138,25 +142,16 @@ def patch():
          
     with open(filename, 'w') as file:
         file.write('')
-
-    def start_1():
-        t1 = threading.Thread(target=write)
-        t2 = threading.Thread(target=read)
-        t1.start()
-        t2.start()
-    
-    def stop_1():
-        global flag_patch
-        flag_patch = 0
-
-    return render_template("./upload/fetch.html")
-
-@app.route("/bgn_fetch/", methods=["POST", "GET"])
-def bgn_fetch():
+    t1 = threading.Thread(target=write)
+    t2 = threading.Thread(target=read)
+    t1.start()
+    t2.start()
     return render_template("./upload/fetch.html")
 
 @app.route("/end_fetch/", methods=["POST", "GET"])
 def end_fetch():
+    global flag_patch
+    flag_patch = 0
     return render_template("./upload/fetch.html")
 
 # -------------------------------------------数据分析--------------------------
