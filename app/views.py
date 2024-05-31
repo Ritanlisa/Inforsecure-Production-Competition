@@ -1,7 +1,7 @@
 # coding:UTF-8
 
 
-import requests,threading
+import requests, threading
 from app import app
 import json
 from flask import (
@@ -49,6 +49,237 @@ import re
 import hashlib
 import time
 
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pathlib import Path
+import logging
+from flowcontainer.extractor import extract
+import torch
+import torch.nn as nn
+from abc import ABC, abstractmethod
+
+
+class BaseModel(nn.Module):
+    def __init__(self):
+        super(BaseModel, self).__init__()
+
+    @abstractmethod
+    def forward(self, x_payload, x_sequence, x_sta):
+        x_payload, x_sequence, x_sta = self.data_trans(x_payload, x_sequence, x_sta)
+        # 第一个是分类结果，第二个是重构结果
+        return None, None
+
+    @abstractmethod
+    def data_trans(self, x_payload, x_sequence, x_sta):
+        pass
+
+
+class Cnn_Lstm(BaseModel):
+    def __init__(
+        self,
+        input_size=1,
+        hidden_size=512,
+        num_layers=1,
+        bidirectional=True,
+        num_classes=12,
+    ):
+        super(Cnn_Lstm, self).__init__()
+        # rnn配置
+        self.bidirectional = bidirectional
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(
+            input_size,
+            hidden_size,
+            num_layers,
+            bidirectional=bidirectional,
+            batch_first=True,
+        )
+        self.fc0 = nn.Linear(hidden_size, num_classes)
+        self.fc1 = nn.Linear(hidden_size * 2, num_classes)
+
+        self.cnn_feature = nn.Sequential(
+            # 卷积层1
+            nn.Conv1d(
+                kernel_size=25, in_channels=1, out_channels=32, stride=1, padding=12
+            ),  # (1,1024)->(32,1024)
+            nn.BatchNorm1d(32),  # 加上BN的结果
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=3, stride=3, padding=1),  # (32,1024)->(32,342)
+            # 卷积层2
+            nn.Conv1d(
+                kernel_size=25, in_channels=32, out_channels=64, stride=1, padding=12
+            ),  # (32,342)->(64,342)
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=3, stride=3, padding=1),  # (64,342)->(64,114)
+        )
+        # 全连接层
+        self.cnn_classifier = nn.Sequential(
+            # 64*114
+            nn.Flatten(),
+            nn.Linear(
+                in_features=64 * 114, out_features=1024
+            ),  # 784:88*64, 1024:114*64, 4096:456*64
+        )
+
+        self.cnn = nn.Sequential(
+            self.cnn_feature,
+            self.cnn_classifier,
+        )
+
+        self.rnn = nn.Sequential(
+            # (batch_size, seq_len, input_size)
+            nn.LSTM(
+                input_size,
+                hidden_size,
+                num_layers,
+                bidirectional=bidirectional,
+                batch_first=True,
+            ),
+        )
+        self.classifier_bi = nn.Sequential(
+            nn.Linear(in_features=1024 + hidden_size * 2, out_features=1024),
+            nn.Dropout(p=0.7),
+            nn.Linear(in_features=1024, out_features=num_classes),
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Linear(in_features=1024 + hidden_size, out_features=1024),
+            nn.Dropout(p=0.7),
+            nn.Linear(in_features=1024, out_features=num_classes),
+        )
+
+    def forward(self, pay, seq, sta):
+        pay, seq, sta = self.data_trans(pay, seq, sta)
+        x = torch.cat((pay, seq), 1)
+        if self.bidirectional == True:
+            x = self.classifier_bi(x)
+        else:
+            x = self.classifier(x)
+        return x, None
+
+    def data_trans(self, pay, seq, sta):
+        pay = self.cnn(pay)
+        seq = self.rnn(seq)
+        seq = seq[0][:, -1, :]
+        return pay, seq, sta
+
+
+def cnn_lstm(model_path, pretrained=False, **kwargs):
+    """
+    CNN 1D model architecture
+
+    Args:
+        pretrained (bool): if True, returns a model pre-trained model
+    """
+    model = Cnn_Lstm(**kwargs)
+    if pretrained:
+        checkpoint = torch.load(model_path)
+        model.load_state_dict(checkpoint["state_dict"])
+    return model
+
+
+def hex_to_dec(hex_str, target_length):
+    dec_list = []
+    for i in range(0, len(hex_str), 2):
+        dec_list.append(int(hex_str[i : i + 2], 16))
+    dec_list = pad_or_truncate(dec_list, target_length)
+    return dec_list
+
+
+def pad_or_truncate(some_list, target_len):
+    return some_list[:target_len] + [0] * (target_len - len(some_list))
+
+
+def get_pay_seq(pcap, threshold, ip_length, n, m):
+    """
+    :param pcap: 原始pcap
+    :param n: 前n个包
+    :param m: 前m字节
+    :return:
+    """
+    result = extract(pcap, extension=["tcp.payload", "udp.payload"])
+    # 假设有k个流
+    pay_load = []
+    seq_load = []
+    for key in result:
+        value = result[key]
+        ip_len = value.ip_lengths
+        if len(ip_len) < threshold:
+            continue
+        # 统一长度
+        ip_len = pad_or_truncate(ip_len, ip_length)
+        seq_load.append(ip_len)
+
+        packet_num = 0
+        if "tcp.payload" in value.extension:
+            # 提取tcp负载
+            tcp_payload = []
+            for packet in value.extension["tcp.payload"]:
+                if packet_num < n:
+                    # packet[0]是负载，1是标注该报文在流的顺序
+                    load = packet[0]
+                    tcp_payload.extend(hex_to_dec(load, m))
+                    packet_num += 1
+                else:
+                    break
+            # 当前包数太少，加0
+            if packet_num < n:
+                tcp_payload = pad_or_truncate(tcp_payload, m * n)
+            pay_load.append(tcp_payload)
+        elif "udp.payload" in value.extension:
+            # 提取ucp负载
+            udp_payload = []
+            for packet in value.extension["udp.payload"]:
+                if packet_num < n:
+                    # packet[0]是负载，1是标注该报文在流的顺序
+                    load = packet[0]
+                    udp_payload.extend(hex_to_dec(load, m))
+                    packet_num += 1
+                else:
+                    break
+            # 当前包数太少，加0
+            if packet_num < n:
+                udp_payload = pad_or_truncate(udp_payload, m * n)
+            pay_load.append(udp_payload)
+    pay_load = np.array(pay_load)
+    seq_load = np.array(seq_load)
+    return pay_load, seq_load
+
+
+def getIPLength(pcap_folder, threshold, ip_length, packet_num, byte_num):
+    """提取序列长度, 与前packet_num个报文的前byte_num字节, 当流序列长度小于threshold忽略该流"""
+    pay_list = []
+    seq_list = []
+    for pcap in os.listdir(pcap_folder):
+        if pcap.endswith(".pcap"):
+            pcap = os.path.join(pcap_folder, pcap)
+            # 生成ip长度序列seq与负载数据pay
+            pay, seq = get_pay_seq(pcap, threshold, ip_length, packet_num, byte_num)
+            if len(pay) == 0:
+                continue
+            pay_list.extend(pay)
+            seq_list.extend(seq)
+    pay_list = np.array(pay_list)
+    seq_list = np.array(seq_list)
+    print("提取完成了待分类流量数据")
+    return pay_list, seq_list
+
+
+def get_tensor_data(pay_data, seq_data, statistic_file):
+    if statistic_file != "None":
+        statistic_data = np.load(statistic_file)
+    else:
+        statistic_data = np.random.rand(pay_data.shape[0], pay_data.shape[1])
+    # 将 npy 数据转换为 tensor 数据
+    pay_data = torch.from_numpy(pay_data.reshape(-1, 1, pay_data.shape[1])).float()
+    seq_data = torch.from_numpy(seq_data.reshape(-1, seq_data.shape[1], 1)).float()
+    statistic_data = torch.from_numpy(statistic_data).float()
+    return pay_data, seq_data, statistic_data
+
+
 # 导入函数到模板中
 app.jinja_env.globals["enumerate"] = enumerate
 
@@ -58,6 +289,7 @@ PD = PcapDecode()  # 解析器
 PCAPS = None  # 数据包
 NetType = None  # 网络类型
 route = None
+pred_label = []
 # --------------------------------------------------------首页，上传------------
 # 首页
 
@@ -111,48 +343,110 @@ def upload():
 def patch():
     return render_template("./upload/fetch.html")
 
+
 @app.route("/bgn_fetch/", methods=["POST", "GET"])
 def bgn_fetch():
-    url = 'http://192.168.16.53:8080'
-    filename = '123.pcap'
+    url = "http://192.168.16.53:8080"
+    filename = "123.pcap"
     flag_patch = 1
-
-    # 用于线程间同步的事件
-    stop_event = threading.Event()
 
     def write():
         with requests.get(url, stream=True) as response:
-            with open(filename, 'ab') as file:
-                for chunk in response.iter_content(chunk_size=8192): # 每次写入 8192 字节
+            with open(filename, "ab") as file:
+                for chunk in response.iter_content(
+                    chunk_size=8192
+                ):  # 每次写入 8192 字节
                     if flag_patch == 0:
                         break
                     if chunk:
                         file.write(chunk)
-        # 当下载完成时，设置事件
-        stop_event.set()
+        # -----begin deal-----
+        PCAPS = rdpcap(filename)
+        pay, seq = getIPLength(
+            filename,  # cfg.test.traffic_path
+            4,  # cfg.preprocess.threshold
+            128,  # cfg.preprocess.ip_length
+            4,  # cfg.preprocess.packet_num
+            256,  # cfg.preprocess.byte_num
+        )
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"正在使用{device}分类")
 
-    def read():
-        global PCAPS
-        while not stop_event.is_set(): # 读取过程中检查停止事件
-            time.sleep(1)
-            try:
-                PCAPS = rdpcap(filename)
-            except:
-                pass
-         
-    with open(filename, 'w') as file:
-        file.write('')
-    t1 = threading.Thread(target=write)
-    t2 = threading.Thread(target=read)
-    t1.start()
-    t2.start()
+        # os.makedirs(cfg.train.model_dir, exist_ok=True)
+        # model_path = os.path.join(cfg.train.model_dir, cfg.train.model_name)
+        model_path = "./checkpoint/cnn_lstm.pth"
+        if not os.path.exists(model_path):
+            raise FileNotFoundError("模型文件不存在")
+        label2num = {"Adware": 0, "Benign": 1, "Ransom": 2, "Scare": 3, "SMS": 4}
+        num_classes = len(label2num)
+        # model = cnn_lstm(model_path, pretrained=cfg.test.pretrained, num_classes=num_classes).to(device)
+        model = cnn_lstm(model_path, pretrained=False, num_classes=num_classes).to(
+            device
+        )
+
+        index2label = {j: i for i, j in label2num.items()}
+        # print(index2label)
+        # pay_data, seq_data, statistic_data = get_tensor_data(pay_file=cfg.test.flowcontainer.test_pay,seq_file=cfg.test.flowcontainer.test_seq,statistic_file=cfg.test.flowcontainer.test_sta,)
+        pay_data, seq_data, statistic_data = get_tensor_data(
+            pay_file=pay,
+            seq_file=seq,
+            statistic_file=None,
+        )
+        dataset = torch.utils.data.TensorDataset(pay_data, seq_data, statistic_data)
+        dataloader = torch.utils.data.DataLoader(
+            dataset=dataset,
+            # batch_size=cfg.train.BATCH_SIZE,
+            batch_size=128,
+            shuffle=True,
+            pin_memory=True,
+            num_workers=1,
+        )
+        start_index = 0
+        y_pred = None
+        # batch_num = cfg.train.BATCH_SIZE
+        batch_num = 128
+        int_test_nums = len(dataloader) * (batch_num - 1)
+        int_test_nums = (int)(int_test_nums / batch_num) * batch_num
+
+        for i in list(range(batch_num, int_test_nums + batch_num, batch_num)):
+            pay = pay_data[start_index:i]
+            seq = seq_data[start_index:i]
+            sta = statistic_data[start_index:i]
+
+            y_pred_batch, _ = model(pay.to(device), seq.to(device), sta.to(device))
+
+            start_index = i
+            if y_pred == None:
+                y_pred = y_pred_batch.cpu().detach()
+            else:
+                y_pred = torch.cat((y_pred, y_pred_batch.cpu().detach()), dim=0)
+                # print(y_pred.shape)
+
+        _, pred = y_pred.topk(1, 1, largest=True, sorted=True)
+        global pred_label
+        pred_label_extends = [index2label.get(i.tolist()) for i in pred.view(-1).cpu().detach()]
+        pred_label.extend(pred_label_extends)
+        # -----end deal-----
+
+    with open(filename, "w") as file:
+        file.write("")
+    threading.Thread(target=write).start()
     return render_template("./upload/fetch.html")
+
 
 @app.route("/end_fetch/", methods=["POST", "GET"])
 def end_fetch():
     global flag_patch
     flag_patch = 0
     return render_template("./upload/fetch.html")
+
+@app.route("/real_time_classify/", methods=["POST", "GET"])
+def real_time_classify():
+    pred_label_count ={"Adware": 0, "Benign": 0, "Ransom": 0, "Scare": 0, "SMS": 0}
+    for label in pred_label:
+        pred_label_count[label] += 1
+    print(pred_label_count)
+    return render_template("./DLVisibility/real_time_classify.html", pred_label_count=pred_label_count)
 
 # -------------------------------------------数据分析--------------------------
 @app.route("/basedata/", methods=["POST", "GET"])
@@ -268,14 +562,14 @@ def flowanalyzer():
         most_flow_key = list()
         for key, value in most_flow_dict:
             most_flow_key.append(key)
-        arp_dict = {'request': 0, 'reply': 0}  
-        for pcap in PCAPS:  
-            if pcap.haslayer(ARP):  
-                arp = pcap.getlayer(ARP)  
-                if arp.op == 1:  # ARP请求  
-                    arp_dict['request'] += 1  
-                elif arp.op == 2:  # ARP应答  
-                    arp_dict['reply'] += 1  
+        arp_dict = {"request": 0, "reply": 0}
+        for pcap in PCAPS:
+            if pcap.haslayer(ARP):
+                arp = pcap.getlayer(ARP)
+                if arp.op == 1:  # ARP请求
+                    arp_dict["request"] += 1
+                elif arp.op == 2:  # ARP应答
+                    arp_dict["reply"] += 1
         return render_template(
             "./dataanalyzer/flowanalyzer.html",
             time_flow_keys=list(time_flow_dict.keys()),
