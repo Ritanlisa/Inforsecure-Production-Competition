@@ -488,7 +488,7 @@ def sub_FlowAnalysis():
 # log_view
 @app.route("/log_view/", methods=["POST", "GET"])
 def log_view():
-    netFolder = app.config["NETWORK_FOLDER"]
+    netFolder = app.config["LOG_FOLDER"]
     logfile = os.path.join(netFolder, "log.log")
     if not os.path.exists(netFolder):
         os.makedirs(netFolder)
