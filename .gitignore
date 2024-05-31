@@ -92,3 +92,6 @@ ENV/
 CSV/
 Files/
 PCAP/
+
+# big model
+*.pth
