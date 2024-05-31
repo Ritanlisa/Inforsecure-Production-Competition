@@ -661,7 +661,7 @@ require.config({
                 'echarts/chart/bar'
             ],
             function (ec) {
-                var myChart = ec.init(document.getElementById('main'));
+                var myChart = echarts.init(document.getElementById('main'));
                 var option = {
                     ...
                 }
@@ -737,7 +737,7 @@ require(
         'echarts/chart/pie'
     ],
     function (ec) {
-        var myChart = ec.init(document.getElementById('main'));
+        var myChart = echarts.init(document.getElementById('main'));
         myChart.setOption({...});
     }
 );

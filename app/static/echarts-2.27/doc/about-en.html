@@ -223,7 +223,7 @@
                 'echarts/chart/line'
             ],
             function(ec, theme) {
-                myChart = ec.init(document.getElementById('main'), theme);
+                myChart = echarts.init(document.getElementById('main'), theme);
                 myChart.setOption({
                     title : {
                         text: 'Github Stars',

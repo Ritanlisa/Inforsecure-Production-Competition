@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>训练结果分析</title>
+
+    <link href="../../static/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="../../static/bootstrap-3.3.5/css/bootstrap-theme.min.css" rel="stylesheet" type="text/css" />
+
+    <script src="../../static/bootstrap-3.3.5/js/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <script src="../../static/bootstrap-3.3.5/js/bootstrap.min.js" type="text/javascript"></script>
+
+</head>
+
+<body>
+    <br>
+    <!--ACC曲线图和loss曲线图-->
+    <div class="container" style="display: flex; justify-content: space-between;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="ACC_curve" style="height: 400px;width: 400px;"></div>
+            <br>
+            <div id="mix_matrix" style="height: 400px;width: 400px;"></div>
+        </div>
+        <div id="loss_curve" style="height: 400px;width: 400px;"></div>
+    </div>
+    {% autoescape false %}
+    <!-- ECharts单文件引入 -->
+    <script src="../../static/echarts-5.5.0-src/dist/echarts.min.js"></script>
+
+    <!--ACC曲线图-->
+    <script>
+        // 路径配置
+        // 基于准备好的dom，初始化echarts图表
+        var myChart = echarts.init(document.getElementById('ACC_curve'));
+
+        var option = {
+            title: {
+                text: 'ACC曲线'
+            },
+            tooltip: {
+                trigger: 'axis'
+            },
+            calculable: false,
+            xAxis: [
+                {
+                    type: 'value',
+                    min: 0.0000
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    min: 0.0000,
+                    max: 1.0000
+                }
+            ],
+            series: [
+                {
+                    name: 'ACC',
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: {
+                        normal: {
+                            label: { show: true },
+                            color: '#6495ed', //图例颜色设置
+                        },
+                        emphasis: { label: { show: true } }
+                    },
+                    data: {{ ACC }},
+            type: 'line'
+                        }
+                    ]
+                };
+        myChart.setOption(option);
+    </script>
+
+    <!--loss曲线图-->
+    <script>
+        // 基于准备好的dom，初始化echarts图表
+        var myChart = echarts.init(document.getElementById('loss_curve'));
+
+        var option = {
+            title: {
+                text: 'loss曲线'
+            },
+            tooltip: {
+                trigger: 'axis'
+            },
+            calculable: false,
+            xAxis: [
+                {
+                    type: 'value',
+                    min: 0.0000
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value',
+                    min: 0.0000
+                }
+            ],
+            series: [
+                {
+                    name: 'loss',
+                    type: 'line',
+                    smooth: true,
+                    itemStyle: {
+                        normal: {
+                            label: { show: true },
+                            color: '#6495ed', //图例颜色设置
+                        },
+                        emphasis: { label: { show: true } }
+                    },
+                    data: {{ loss }},
+            type: 'line'
+                        }
+                    ]
+                };
+        myChart.setOption(option);
+    </script>
+
+    <!--混淆矩阵-->
+    <script>
+        var myChart = echarts.init(document.getElementById('mix_matrix'));
+        // 为echarts对象加载数据
+        var dataTF = ['真数据', '假数据'];
+        var resultTF = ['推理真', '推理假'];
+
+        var data = {{ mixmatrix }};
+
+        data = data.map(function (item) {
+            return [item[1], item[0], item[2] || '-'];
+        });
+
+        option = {
+            title: {
+                text: '混淆矩阵'
+            },
+            tooltip: {
+                position: 'top'
+            },
+            animation: true,
+            grid: {
+                height: '50%',
+                top: '10%'
+            },
+            xAxis: {
+                type: 'category',
+                data: resultTF,
+                splitArea: {
+                    show: true
+                }
+            },
+            yAxis: {
+                type: 'category',
+                data: dataTF,
+                splitArea: {
+                    show: true
+                }
+            },
+            visualMap: {
+                min: {{ min }},
+                max: {{ max }},
+                calculable: true,
+                orient: 'horizontal',
+                left: 'center',
+                bottom: '15%'
+            },
+            series: [{
+                name: '样例数',
+                type: 'heatmap',
+                data: data,
+                label: {
+                    show: true
+                },
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+        myChart.setOption(option);
+    </script>
+
+    {% endautoescape %}
+</body>
+
+</html>

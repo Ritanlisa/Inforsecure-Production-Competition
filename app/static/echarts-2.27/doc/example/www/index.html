@@ -35,7 +35,7 @@
         ],
         function (ec) {
             //--- 折柱 ---
-            var myChart = ec.init(document.getElementById('main'));
+            var myChart = echarts.init(document.getElementById('main'));
             myChart.setOption({
                 tooltip : {
                     trigger: 'axis'
@@ -81,7 +81,7 @@
             });
             
             // --- 地图 ---
-            var myChart2 = ec.init(document.getElementById('mainMap'));
+            var myChart2 = echarts.init(document.getElementById('mainMap'));
             myChart2.setOption({
                 tooltip : {
                     trigger: 'item',

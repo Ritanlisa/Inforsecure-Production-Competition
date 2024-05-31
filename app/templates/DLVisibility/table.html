@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head lang="en">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+
+  <link href="../../static/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <script src="../../static/bootstrap-3.3.5/js/bootstrap.min.js" type="text/javascript"></script>
+
+  <link href="../../static/bootstrap-3.3.5/css/bootstrap-theme.min.css" rel="stylesheet" type="text/css" />
+  <link type="text/css" href="../../static/jquery-ui-bootstrap/css/custom-theme/jquery-ui-1.10.0.custom.css" rel="stylesheet" />
+  <script src="../../static/bootstrap-3.3.5/js/jquery-1.11.3.min.js" type="text/javascript"></script>
+  <script src="../../static/jquery-ui-bootstrap/assets/js/jquery-ui-1.10.0.custom.min.js" type="text/javascript"></script>
+</head>
+
+<body>
+  <div class="container">
+    <h2 class="text-center">{{ title }}</h2>
+  </div>
+  <br>
+
+  <div class="bs-example" data-example-id="hoverable-table">
+    <div class="table-responsive">
+      <table class="table table-striped", style="table-layout: auto;word-break:keep-all">
+        <thead>
+          <tr>
+            {% for key, value in dispName.items() %}
+            <th class="text-center">{{ value|safe }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in data %}
+          <tr data-toggle="modal" data-target="#myModal">
+            {% for key, value in dispName.items() %}
+            <td class="text-center">{{ item[key] }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+
+</html>

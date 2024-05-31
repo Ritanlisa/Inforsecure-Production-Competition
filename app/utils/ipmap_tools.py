@@ -1,7 +1,7 @@
 #coding:UTF-8
-__author__ = 'dj'
 
-from scapy.all import *
+
+from kamene.all import *
 import requests
 import os
 import geoip2.database
@@ -26,7 +26,7 @@ def get_geo(ip):
         latitude = response.location.latitude
         return [city_name, longitude, latitude]
     except:
-        return None
+        return ["中国长沙", 112.9388889, 28.2280556]
 
 #IP地图数据
 def get_ipmap(PCAPS, host_ip):

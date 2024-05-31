@@ -1,7 +1,7 @@
 #coding:UTF-8
-__author__ = 'dj'
 
-from scapy.all import *
+
+from kamene.all import *
 import time
 import re
 import collections

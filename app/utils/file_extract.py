@@ -1,8 +1,8 @@
 #coding:UTF-8
-__author__ = 'dj'
+
 
 from .data_extract import web_data, telnet_ftp_data, mail_data
-from scapy.all import *
+from kamene.all import *
 from collections import OrderedDict
 import base64
 import os

@@ -358,7 +358,7 @@
                 },
                 data : [
                     {% for key, value in ip_value%}
-                        [{name:'{{ mygeo[0] }}'}, {name:'{{ key }}',value:{{ value.split(':')[0] }}}],
+                        [{name:'{{ key }}'}, {name:'{{ mygeo[0] }}',value:{{ value.split(':')[0] }}}],
                     {% endfor %}
                     [{name:'{{ mygeo[0] }}'}, {name:'{{ mygeo[0] }}',value:0}]
                 ]
