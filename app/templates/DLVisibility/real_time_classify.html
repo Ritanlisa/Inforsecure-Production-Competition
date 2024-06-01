@@ -17,25 +17,78 @@
 <body>
     <br>
     <br>
+    <h1 style="text-align: center;">实时数据分类</h1>
     <br>
     <div class="container" style="display: flex; justify-content: space-between;">
-        <div id="classify_pie" style="height: 800px;width: 800px;"></div>
+        <div id="classify_bar" style="height: 600px;width: 800px;"></div>
+        <div id="classify_pie" style="height: 600px;width: 800px;"></div>
     </div>
     {% autoescape false %}
     <!-- ECharts单文件引入 -->
     <script src="../../static/echarts-5.5.0-src/dist/echarts.min.js"></script>
 
     <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('classify_bar'));
+    
+        var option = {
+            tooltip: {
+                trigger: 'axis',
+                formatter: '网络类型 <br/>{b} : {c}',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            legend: {
+                data: ['networkType']
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value'  // 修改这里
+            },
+            yAxis: {
+                type: 'category',
+                data: ['Adware', 'Benign', 'Ransom', 'Scare', 'SMS']
+            },
+            series: [{
+                name: '网络类型',
+                type: 'bar',
+                itemStyle: {
+                    normal: {
+                        label: {
+                            textStyle: {
+                                fontSize: 20,  // 调整字体大小
+                                width: null  // 这将取消 ECharts 对标签宽度的限制
+                            }
+                        }
+                    },
+                    emphasis: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
+                //data 从 pred_label_count ({"Adware": 10, "Benign": 20, "Ransom": 10, "Scare": 13, "SMS": 6}) 获得
+                data: [
+                    {% for key, value in pred_label_count.items() %}
+                        {value: {{ value }}, name: "{{ key }}" }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                    ]
+                }]
+            };
+    
+        // 为echarts对象加载数据
+        myChart.setOption(option);
+    </script>
+
+    <script type="text/javascript">
         var myChart = echarts.init(document.getElementById('classify_pie'));
 
         var option = {
-            title: {
-                text: '实时数据分类结果',
-                left: 'center',
-                textStyle: {
-                    fontSize: 40
-                }
-            },
             tooltip: {
                 trigger: 'item',
                 formatter: '网络类型 <br/>{b} : {c} ({d}%)'
@@ -43,7 +96,7 @@
             series: [{
                 name: 'networkType',
                 type: 'pie',
-                radius: '50%',
+                radius: '60%',
                 itemStyle: {
                     normal: {
                         label: {
