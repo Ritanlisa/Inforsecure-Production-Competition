@@ -95,3 +95,5 @@ PCAP/
 
 # big model
 *.pth
+
+config.py
