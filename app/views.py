@@ -59,7 +59,8 @@ from flowcontainer.extractor import extract
 import torch
 import torch.nn as nn
 from abc import ABC, abstractmethod
-from openai import OpenAI
+import requests
+import json
 
 
 class BaseModel(nn.Module):
@@ -455,23 +456,30 @@ def intro():
     # 获得应用名称
     app_name = "政府免息贷款平台" # 示例恶意应用名称
     
-    client = OpenAI(
-        base_url = app.config["BASE_URL"],
-        api_key = app.config["API_KEY"]
-        )
-    try:
-        completion = client.chat.completions.create(
-            model="meta/llama3-70b-instruct",
-            messages=[{"role":"user","content":f'请你使用通俗易懂的中文回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，允许你进行大胆的猜想：我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'}],
-            temperature=0.5,
-            top_p=1,
-            max_tokens=1024,
-            stream=False
-            )
-    except openai.APIStatusError as e:
-        print(e)
-        return render_template("./DLVisibility/intro.html",appname=app_name,appinfo=str(e))
-    appinfo = completion.choices[0].message
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {app.config['API_KEY']}"
+    }
+    
+    data = {
+        "max_tokens": 1200,
+        "model": app.config["MODEL_NAME"],
+        "temperature": 0.8,
+        "top_p": 1,
+        "presence_penalty": 1,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，也不要用诸如"根据你提供的信息"之类的陈述性语言。允许你进行大胆的猜想。'
+                },
+                {
+                    "role": "user",
+                    "content": f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'
+                }
+            ]
+        }
+    response = requests.post(app.config["BASE_URL"], headers=headers, data=json.dumps(data).encode('utf-8') )
+    appinfo = json.loads(response.content.decode("utf-8"))["choices"][0]["message"]["content"]
     return render_template("./DLVisibility/intro.html",appname=app_name,appinfo=appinfo)
 
 # -------------------------------------------数据分析--------------------------
