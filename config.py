@@ -7,6 +7,10 @@ WTF_CSRF_ENABLED = False
 
 SECRET_KEY = '!@#$%8F6F98EC3684AECA1DC44E1CB816E4A5^&*()'
 
+# OpenAI API Settings
+API_KEY = 'ENTER-YOUR-API-KEY-HERE'
+BASE_URL = 'https://integrate.api.nvidia.com/v1'
+
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 

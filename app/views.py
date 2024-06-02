@@ -1,6 +1,7 @@
 # coding:UTF-8
 
 
+import openai
 import requests, threading
 from app import app
 import json
@@ -58,6 +59,7 @@ from flowcontainer.extractor import extract
 import torch
 import torch.nn as nn
 from abc import ABC, abstractmethod
+from openai import OpenAI
 
 
 class BaseModel(nn.Module):
@@ -447,6 +449,30 @@ def real_time_classify():
         pred_label_count[label] += 1
     print(pred_label_count)
     return render_template("./DLVisibility/real_time_classify.html", pred_label_count=pred_label_count)
+
+@app.route("/intro/", methods=["POST", "GET"])
+def intro():
+    # 获得应用名称
+    app_name = "政府免息贷款平台" # 示例恶意应用名称
+    
+    client = OpenAI(
+        base_url = app.config["BASE_URL"],
+        api_key = app.config["API_KEY"]
+        )
+    try:
+        completion = client.chat.completions.create(
+            model="meta/llama3-70b-instruct",
+            messages=[{"role":"user","content":f'请你使用通俗易懂的中文回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，允许你进行大胆的猜想：我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'}],
+            temperature=0.5,
+            top_p=1,
+            max_tokens=1024,
+            stream=False
+            )
+    except openai.APIStatusError as e:
+        print(e)
+        return render_template("./DLVisibility/intro.html",appname=app_name,appinfo=str(e))
+    appinfo = completion.choices[0].message
+    return render_template("./DLVisibility/intro.html",appname=app_name,appinfo=appinfo)
 
 # -------------------------------------------数据分析--------------------------
 @app.route("/basedata/", methods=["POST", "GET"])
