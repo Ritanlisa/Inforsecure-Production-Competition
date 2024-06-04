@@ -2,7 +2,7 @@
 
 from kamene.all import *
 import time
-from .source import biaoqian
+from .source import label
 
 
 class PcapDecode:
@@ -53,7 +53,7 @@ class PcapDecode:
         data = dict()
         if p.haslayer(Ether):
             data = self.ip_decode(p)
-            data['type'] = biaoqian(p)
+            data['type'] = label(p)
             return data
         else:
             data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
@@ -63,7 +63,7 @@ class PcapDecode:
             data['Procotol'] = 'Unknow'
             data['len'] = len(corrupt_bytes(p))
             data['info'] = p.summary()
-            data['type'] = biaoqian(p)
+            data['type'] = label(p)
             return data
 
     #解析IP层协议
