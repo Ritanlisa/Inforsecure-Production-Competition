@@ -515,8 +515,12 @@ def intro():
             ]
         }
     probTexts = ['很可能','可能','也许']
-    
-    response = requests.post(app.config["BASE_URL"], headers=headers, data=json.dumps(data).encode('utf-8') )
+    try:
+        response = requests.post(app.config["BASE_URL"], headers=headers, data=json.dumps(data).encode('utf-8') )
+    except requests.exceptions.ConnectTimeout:
+        return render_template("./DLVisibility/intro.html",appname=app_name,appinfo="请求超时，请检查你的网络")
+    if response.content.decode("utf-8") == 'Authorization':
+        return render_template("./DLVisibility/intro.html",appname=app_name,appinfo="API_KEY错误，请检查你的API_KEY")
     appinfo = json.loads(response.content.decode("utf-8"))["choices"][0]["message"]["content"]
     
     for probText in probTexts:
