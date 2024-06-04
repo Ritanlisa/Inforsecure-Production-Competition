@@ -402,7 +402,17 @@ def end_fetch():
 @app.route("/real_time_classify/", methods=["POST", "GET"])
 def real_time_classify():
     global filename
+    pred_label_count = {
+        "Adware": 0,
+        "Benign": 0,
+        "Ransom": 0,
+        "Scare": 0,
+        "SMS": 0
+    }
     filepath = filename.rsplit('/', 1)[0]
+    if not os.path.exists(filepath): # 判断文件夹是否存在
+        return render_template("./DLVisibility/real_time_classify.html",
+                           pred_label_count=pred_label_count)
     pay, seq = getIPLength(
         filepath,  # cfg.test.traffic_path
         4,  # cfg.preprocess.threshold
@@ -470,13 +480,6 @@ def real_time_classify():
     ]
     pred_label.extend(pred_label_extends)
 
-    pred_label_count = {
-        "Adware": 0,
-        "Benign": 0,
-        "Ransom": 0,
-        "Scare": 0,
-        "SMS": 0
-    }
     for label in pred_label:
         pred_label_count[label] += 1
     print(pred_label_count)
@@ -1026,9 +1029,9 @@ def feature_extract():
 # flow_analyse
 @app.route("/flow_analyse/", methods=["POST", "GET"])
 def flow_analyse():
-    if NetType == None:
-        flash("请先选择网络类型!")
-        return redirect(url_for("select_method", next="flow_analyse"))
+    if PCAPS == None:
+        flash("请先选择PCAP包!")
+        return redirect(url_for("upload", next="feature_extract"))
     else:
         netFolder = app.config["NETWORK_FOLDER"]
         current_netFolder = os.path.join(netFolder, NetType)
