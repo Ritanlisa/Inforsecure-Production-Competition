@@ -1,10 +1,12 @@
 #coding:UTF-8
 
-
 from kamene.all import *
 import time
+from .source import biaoqian
+
 
 class PcapDecode:
+
     def __init__(self):
         #ETHER:读取以太网层协议配置文件
         with open('./app/utils/protocol/ETHER', 'r', encoding='UTF-8') as f:
@@ -51,14 +53,17 @@ class PcapDecode:
         data = dict()
         if p.haslayer(Ether):
             data = self.ip_decode(p)
+            data['type'] = biaoqian(p)
             return data
         else:
-            data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+            data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                         time.localtime(p.time))
             data['Source'] = 'Unknow'
             data['Destination'] = 'Unknow'
             data['Procotol'] = 'Unknow'
             data['len'] = len(corrupt_bytes(p))
             data['info'] = p.summary()
+            data['type'] = biaoqian(p)
             return data
 
     #解析IP层协议
@@ -69,12 +74,13 @@ class PcapDecode:
             if p.haslayer(TCP):  #6:TCP
                 data = self.tcp_decode(p, ip)
                 return data
-            elif p.haslayer(UDP): #17:UDP
+            elif p.haslayer(UDP):  #17:UDP
                 data = self.udp_decode(p, ip)
                 return data
             else:
                 if ip.proto in self.IP_DICT:
-                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                                 time.localtime(p.time))
                     data['Source'] = ip.src
                     data['Destination'] = ip.dst
                     data['Procotol'] = self.IP_DICT[ip.proto]
@@ -82,7 +88,8 @@ class PcapDecode:
                     data['info'] = p.summary()
                     return data
                 else:
-                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                                 time.localtime(p.time))
                     data['Source'] = ip.src
                     data['Destination'] = ip.dst
                     data['Procotol'] = 'IPv4'
@@ -94,12 +101,13 @@ class PcapDecode:
             if p.haslayer(TCP):  #6:TCP
                 data = self.tcp_decode(p, ipv6)
                 return data
-            elif p.haslayer(UDP): #17:UDP
+            elif p.haslayer(UDP):  #17:UDP
                 data = self.udp_decode(p, ipv6)
                 return data
             else:
                 if ipv6.nh in self.IP_DICT:
-                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                                 time.localtime(p.time))
                     data['Source'] = ipv6.src
                     data['Destination'] = ipv6.dst
                     data['Procotol'] = self.IP_DICT[ipv6.nh]
@@ -107,7 +115,8 @@ class PcapDecode:
                     data['info'] = p.summary()
                     return data
                 else:
-                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+                    data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                                 time.localtime(p.time))
                     data['Source'] = ipv6.src
                     data['Destination'] = ipv6.dst
                     data['Procotol'] = 'IPv6'
@@ -116,7 +125,8 @@ class PcapDecode:
                     return data
         else:
             if p.type in self.ETHER_DICT:
-                data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+                data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                             time.localtime(p.time))
                 data['Source'] = p.src
                 data['Destination'] = p.dst
                 data['Procotol'] = self.ETHER_DICT[p.type]
@@ -124,7 +134,8 @@ class PcapDecode:
                 data['info'] = p.summary()
                 return data
             else:
-                data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+                data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                             time.localtime(p.time))
                 data['Source'] = p.src
                 data['Destination'] = p.dst
                 data['Procotol'] = hex(p.type)
@@ -136,7 +147,8 @@ class PcapDecode:
     def tcp_decode(self, p, ip):
         data = dict()
         tcp = p.getlayer(TCP)
-        data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+        data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                     time.localtime(p.time))
         data['Source'] = ip.src + ":" + str(ip.sport)
         data['Destination'] = ip.dst + ":" + str(ip.dport)
         data['len'] = len(corrupt_bytes(p))
@@ -157,7 +169,8 @@ class PcapDecode:
     def udp_decode(self, p, ip):
         data = dict()
         udp = p.getlayer(UDP)
-        data['time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.time))
+        data['time'] = time.strftime('%Y-%m-%d %H:%M:%S',
+                                     time.localtime(p.time))
         data['Source'] = ip.src + ":" + str(ip.sport)
         data['Destination'] = ip.dst + ":" + str(ip.dport)
         data['len'] = len(corrupt_bytes(p))
