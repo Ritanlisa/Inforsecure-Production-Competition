@@ -303,6 +303,8 @@ PCAPS = None  # 数据包
 NetType = None  # 网络类型
 route = None
 pred_label = []
+flag_patch = 1  # 控制实时抓包的开启
+filename = '123/123.pcap'
 # --------------------------------------------------------首页，上传------------
 # 首页
 
@@ -357,14 +359,10 @@ def patch():
     return render_template("./upload/fetch.html")
 
 
-flag_patch = 1
-
-
 @app.route("/bgn_fetch/", methods=["POST", "GET"])
 def bgn_fetch():
     url = "http://192.168.160.34:8080"
-    filename = "123.pcap"
-    global flag_patch
+    global flag_patch, filename
     flag_patch = 1
     stop_event = threading.Event()
 
@@ -388,83 +386,6 @@ def bgn_fetch():
             except:
                 pass
 
-    def deal():
-        pay, seq = getIPLength(
-            filename,  # cfg.test.traffic_path
-            4,  # cfg.preprocess.threshold
-            128,  # cfg.preprocess.ip_length
-            4,  # cfg.preprocess.packet_num
-            256,  # cfg.preprocess.byte_num
-        )
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"正在使用{device}分类")
-
-        # os.makedirs(cfg.train.model_dir, exist_ok=True)
-        # model_path = os.path.join(cfg.train.model_dir, cfg.train.model_name)
-        model_path = "./checkpoint/cnn_lstm.pth"
-        if not os.path.exists(model_path):
-            raise FileNotFoundError("模型文件不存在")
-        label2num = {
-            "Adware": 0,
-            "Benign": 1,
-            "Ransom": 2,
-            "Scare": 3,
-            "SMS": 4
-        }
-        num_classes = len(label2num)
-        # model = cnn_lstm(model_path, pretrained=cfg.test.pretrained, num_classes=num_classes).to(device)
-        model = cnn_lstm(model_path, pretrained=False,
-                         num_classes=num_classes).to(device)
-
-        index2label = {j: i for i, j in label2num.items()}
-        # print(index2label)
-        # pay_data, seq_data, statistic_data = get_tensor_data(pay_file=cfg.test.flowcontainer.test_pay,seq_file=cfg.test.flowcontainer.test_seq,statistic_file=cfg.test.flowcontainer.test_sta,)
-        pay_data, seq_data, statistic_data = get_tensor_data(
-            pay_file=pay,
-            seq_file=seq,
-            statistic_file=None,
-        )
-        dataset = torch.utils.data.TensorDataset(pay_data, seq_data,
-                                                 statistic_data)
-        dataloader = torch.utils.data.DataLoader(
-            dataset=dataset,
-            # batch_size=cfg.train.BATCH_SIZE,
-            batch_size=128,
-            shuffle=True,
-            pin_memory=True,
-            num_workers=1,
-        )
-        start_index = 0
-        y_pred = None
-        # batch_num = cfg.train.BATCH_SIZE
-        batch_num = 128
-        int_test_nums = len(dataloader) * (batch_num - 1)
-        int_test_nums = (int)(int_test_nums / batch_num) * batch_num
-
-        for i in list(range(batch_num, int_test_nums + batch_num, batch_num)):
-            pay = pay_data[start_index:i]
-            seq = seq_data[start_index:i]
-            sta = statistic_data[start_index:i]
-
-            y_pred_batch, _ = model(pay.to(device), seq.to(device),
-                                    sta.to(device))
-
-            start_index = i
-            if y_pred == None:
-                y_pred = y_pred_batch.cpu().detach()
-            else:
-                y_pred = torch.cat((y_pred, y_pred_batch.cpu().detach()),
-                                   dim=0)
-                # print(y_pred.shape)
-
-        _, pred = y_pred.topk(1, 1, largest=True, sorted=True)
-        global pred_label
-        pred_label_extends = [
-            index2label.get(i.tolist()) for i in pred.view(-1).cpu().detach()
-        ]
-        pred_label.extend(pred_label_extends)
-        # -----end deal-----
-
     with open(filename, "w") as file:
         file.write("")
     threading.Thread(target=write).start()
@@ -481,6 +402,75 @@ def end_fetch():
 
 @app.route("/real_time_classify/", methods=["POST", "GET"])
 def real_time_classify():
+    global filename
+    filepath = filename.rsplit('/', 1)[0]
+    pay, seq = getIPLength(
+        filepath,  # cfg.test.traffic_path
+        4,  # cfg.preprocess.threshold
+        128,  # cfg.preprocess.ip_length
+        4,  # cfg.preprocess.packet_num
+        256,  # cfg.preprocess.byte_num
+    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"正在使用{device}分类")
+
+    # os.makedirs(cfg.train.model_dir, exist_ok=True)
+    # model_path = os.path.join(cfg.train.model_dir, cfg.train.model_name)
+    model_path = "./checkpoint/cnn_lstm.pth"
+    if not os.path.exists(model_path):
+        raise FileNotFoundError("模型文件不存在")
+    label2num = {"Adware": 0, "Benign": 1, "Ransom": 2, "Scare": 3, "SMS": 4}
+    num_classes = len(label2num)
+    # model = cnn_lstm(model_path, pretrained=cfg.test.pretrained, num_classes=num_classes).to(device)
+    model = cnn_lstm(model_path, pretrained=False,
+                     num_classes=num_classes).to(device)
+
+    index2label = {j: i for i, j in label2num.items()}
+    # print(index2label)
+    # pay_data, seq_data, statistic_data = get_tensor_data(pay_file=cfg.test.flowcontainer.test_pay,seq_file=cfg.test.flowcontainer.test_seq,statistic_file=cfg.test.flowcontainer.test_sta,)
+    pay_data, seq_data, statistic_data = get_tensor_data(
+        pay_data=pay,
+        seq_data=seq,
+        statistic_file="None",
+    )
+    dataset = torch.utils.data.TensorDataset(pay_data, seq_data,
+                                             statistic_data)
+    dataloader = torch.utils.data.DataLoader(
+        dataset=dataset,
+        # batch_size=cfg.train.BATCH_SIZE,
+        batch_size=128,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=1,
+    )
+    start_index = 0
+    y_pred = None
+    # batch_num = cfg.train.BATCH_SIZE
+    batch_num = 128
+    int_test_nums = len(dataloader) * (batch_num - 1)
+    # int_test_nums = (int)(int_test_nums / batch_num) * batch_num
+
+    for i in list(range(batch_num, int_test_nums + batch_num, batch_num)):
+        pay = pay_data[start_index:i]
+        seq = seq_data[start_index:i]
+        sta = statistic_data[start_index:i]
+
+        y_pred_batch, _ = model(pay.to(device), seq.to(device), sta.to(device))
+
+        start_index = i
+        if y_pred == None:
+            y_pred = y_pred_batch.cpu().detach()
+        else:
+            y_pred = torch.cat((y_pred, y_pred_batch.cpu().detach()), dim=0)
+            # print(y_pred.shape)
+
+    _, pred = y_pred.topk(1, 1, largest=True, sorted=True)
+    global pred_label
+    pred_label_extends = [
+        index2label.get(i.tolist()) for i in pred.view(-1).cpu().detach()
+    ]
+    pred_label.extend(pred_label_extends)
+
     pred_label_count = {
         "Adware": 0,
         "Benign": 0,
