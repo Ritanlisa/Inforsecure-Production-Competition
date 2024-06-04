@@ -495,37 +495,30 @@ def intro():
     }
 
     data = {
-        "max_tokens":
-        1200,
-        "model":
-        app.config["MODEL_NAME"],
-        "temperature":
-        0.8,
-        "top_p":
-        1,
-        "presence_penalty":
-        1,
-        "messages": [{
-            "role":
-            "system",
-            "content":
-            '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，也不要用诸如"根据你提供的信息"之类的陈述性语言。允许你进行大胆的猜想。'
-        }, {
-            "role":
-            "user",
-            "content":
-            f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'
-        }]
-    }
-    response = requests.post(app.config["BASE_URL"],
-                             headers=headers,
-                             data=json.dumps(data).encode('utf-8'))
-    appinfo = json.loads(
-        response.content.decode("utf-8"))["choices"][0]["message"]["content"]
-    return render_template("./DLVisibility/intro.html",
-                           appname=app_name,
-                           appinfo=appinfo)
-
+        "max_tokens": 1200,
+        "model": app.config["MODEL_NAME"],
+        "temperature": 0.8,
+        "top_p": 1,
+        "presence_penalty": 1,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文纯文本回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，不要用诸如"根据你提供的信息"之类的陈述性语言,不要使用markdown语法，也不要换行列举。允许你进行大胆的猜想。'
+                },
+                {
+                    "role": "user",
+                    "content": f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'
+                }
+            ]
+        }
+    probTexts = ['很可能','可能','也许']
+    
+    response = requests.post(app.config["BASE_URL"], headers=headers, data=json.dumps(data).encode('utf-8') )
+    appinfo = json.loads(response.content.decode("utf-8"))["choices"][0]["message"]["content"]
+    
+    for probText in probTexts:
+        appinfo = appinfo.replace(probText,'')
+    return render_template("./DLVisibility/intro.html",appname=app_name,appinfo=appinfo)
 
 # -------------------------------------------数据分析--------------------------
 @app.route("/basedata/", methods=["POST", "GET"])

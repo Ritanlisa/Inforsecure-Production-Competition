@@ -136,7 +136,7 @@
 
 						<i class="icon-home"></i>
 
-						<span class="title">首页</span>
+						<span class="title">上传离线包</span>
 
 						<span class="selected"></span>
 
@@ -150,7 +150,7 @@
 
 						<i class="icon-download-alt"></i>
 
-						<span class="title">实时抓取</span>
+						<span class="title">实时抓包</span>
 
 						<span class="selected"></span>
 
@@ -358,26 +358,26 @@
 						</li>
 
 						<li>
-							<a href="{{ url_for('flow_analyse') }}" target="main-content">
-								流量分类
-							</a>
-						</li>
-
-						<li>
 							<a href="{{ url_for('result_analyse') }}" target="main-content">
 								结果分析
 							</a>
 						</li>
 
 						<li>
+							<a href="{{ url_for('flow_analyse') }}" target="main-content">
+								实时流量分类
+							</a>
+						</li>
+
+						<li>
 							<a href="{{ url_for('real_time_classify') }}" target="main-content">
-								实时数据分类
+								流量分类统计
 							</a>
 						</li>
 
 						<li>
 							<a href="{{url_for('intro')}}" target="main-content">
-								恶意流量来源介绍
+								智能安全建议
 							</a>
 						</li>
 
