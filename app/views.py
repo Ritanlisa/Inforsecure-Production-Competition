@@ -302,7 +302,6 @@ PD = PcapDecode()  # 解析器
 PCAPS = None  # 数据包
 NetType = None  # 网络类型
 route = None
-pred_label = []
 flag_patch = 1  # 控制实时抓包的开启
 filename = '123/123.pcap'
 # --------------------------------------------------------首页，上传------------
@@ -376,7 +375,7 @@ def bgn_fetch():
                     if chunk:
                         file.write(chunk)
         stop_event.set()
-        # -----begin deal-----
+
     def read():
         global PCAPS
         while not stop_event.is_set():  # 读取过程中检查停止事件
@@ -465,7 +464,7 @@ def real_time_classify():
             # print(y_pred.shape)
 
     _, pred = y_pred.topk(1, 1, largest=True, sorted=True)
-    global pred_label
+    pred_label = []
     pred_label_extends = [
         index2label.get(i.tolist()) for i in pred.view(-1).cpu().detach()
     ]
@@ -1041,49 +1040,24 @@ def flow_analyse():
         netFolder = app.config["NETWORK_FOLDER"]
         current_netFolder = os.path.join(netFolder, NetType)
         analysed_json = os.path.join(current_netFolder, "流量分类.json")
+        pcaps = get_all_pcap(PCAPS, PD)
+        flow = []
+        for count, pcap in pcaps.items():
+            flow.append({
+                'id': count,
+                'source': pcap['type'],
+                'src_ip': pcap['Source'].split(':')[0],
+                'dst_ip': pcap['Destination'].split(':')[0],
+                'proto': pcap['Procotol'],
+                'sport': pcap['Source'].split(':')[1],
+                'dport': pcap['Destination'].split(':')[1],
+                'len': pcap['len'],
+                'time': pcap['time']
+            })
+        with open(analysed_json, "w", encoding="utf-8") as f:
+            json.dump(flow, f)
         if not os.path.exists(current_netFolder):
             os.makedirs(current_netFolder)
-        if not os.path.exists(analysed_json):
-            flow = [
-                {
-                    "id": 1,
-                    "source": "qq",
-                    "src_ip": "192.168.1.1",
-                    "dst_ip": "192.168.1.2",
-                    "proto": "TCP",
-                    "sport": 80,
-                    "dport": 8080,
-                    "len": 100,
-                    "time": "2021-01-01 00:00:00",
-                },
-                {
-                    "id": 2,
-                    "source": "qq",
-                    "src_ip": "192.168.1.1",
-                    "dst_ip": "192.168.1.2",
-                    "proto": "TCP",
-                    "sport": 80,
-                    "dport": 8080,
-                    "len": 100,
-                    "time": "2021-01-01 00:00:00",
-                },
-                {
-                    "id": 3,
-                    "source": "wechat",
-                    "src_ip": "192.168.1.1",
-                    "dst_ip": "192.168.1.2",
-                    "proto": "TCP",
-                    "sport": 80,
-                    "dport": 8080,
-                    "len": 100,
-                    "time": "2021-01-01 00:00:00",
-                },
-            ]
-            with open(analysed_json, "w", encoding="utf-8") as f:
-                json.dump(flow, f)
-        else:
-            with open(analysed_json, "r", encoding="utf-8") as f:
-                flow = json.load(f)
         source_dict = dict()
         for data in flow:
             if data["source"] not in source_dict:
