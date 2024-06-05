@@ -410,9 +410,9 @@ def real_time_classify():
         "SMS": 0
     }
     filepath = filename.rsplit('/', 1)[0]
-    if not os.path.exists(filepath): # 判断文件夹是否存在
+    if not os.path.exists(filepath):  # 判断文件夹是否存在
         return render_template("./DLVisibility/real_time_classify.html",
-                           pred_label_count=pred_label_count)
+                               pred_label_count=pred_label_count)
     pay, seq = getIPLength(
         filepath,  # cfg.test.traffic_path
         4,  # cfg.preprocess.threshold
@@ -498,34 +498,50 @@ def intro():
     }
 
     data = {
-        "max_tokens": 1200,
-        "model": app.config["MODEL_NAME"],
-        "temperature": 0.8,
-        "top_p": 1,
-        "presence_penalty": 1,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文纯文本回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，不要用诸如"根据你提供的信息"之类的陈述性语言,不要使用markdown语法，也不要换行列举。允许你进行大胆的猜想。'
-                },
-                {
-                    "role": "user",
-                    "content": f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'
-                }
-            ]
-        }
-    probTexts = ['很可能','可能','也许']
+        "max_tokens":
+        1200,
+        "model":
+        app.config["MODEL_NAME"],
+        "temperature":
+        0.8,
+        "top_p":
+        1,
+        "presence_penalty":
+        1,
+        "messages": [{
+            "role":
+            "system",
+            "content":
+            '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文纯文本回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，不要用诸如"根据你提供的信息"之类的陈述性语言,不要使用markdown语法，也不要换行列举。允许你进行大胆的猜想。'
+        }, {
+            "role":
+            "user",
+            "content":
+            f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'
+        }]
+    }
+    probTexts = ['很可能', '可能', '也许']
     try:
-        response = requests.post(app.config["BASE_URL"], headers=headers, data=json.dumps(data).encode('utf-8') )
+        response = requests.post(app.config["BASE_URL"],
+                                 headers=headers,
+                                 data=json.dumps(data).encode('utf-8'))
     except requests.exceptions.ConnectTimeout:
-        return render_template("./DLVisibility/intro.html",appname=app_name,appinfo="请求超时，请检查你的网络")
+        return render_template("./DLVisibility/intro.html",
+                               appname=app_name,
+                               appinfo="请求超时，请检查你的网络")
     if response.content.decode("utf-8") == 'Authorization':
-        return render_template("./DLVisibility/intro.html",appname=app_name,appinfo="API_KEY错误，请检查你的API_KEY")
-    appinfo = json.loads(response.content.decode("utf-8"))["choices"][0]["message"]["content"]
-    
+        return render_template("./DLVisibility/intro.html",
+                               appname=app_name,
+                               appinfo="API_KEY错误，请检查你的API_KEY")
+    appinfo = json.loads(
+        response.content.decode("utf-8"))["choices"][0]["message"]["content"]
+
     for probText in probTexts:
-        appinfo = appinfo.replace(probText,'')
-    return render_template("./DLVisibility/intro.html",appname=app_name,appinfo=appinfo)
+        appinfo = appinfo.replace(probText, '')
+    return render_template("./DLVisibility/intro.html",
+                           appname=app_name,
+                           appinfo=appinfo)
+
 
 # -------------------------------------------数据分析--------------------------
 @app.route("/basedata/", methods=["POST", "GET"])
@@ -1036,6 +1052,9 @@ def flow_analyse():
     if PCAPS == None:
         flash("请先选择PCAP包!")
         return redirect(url_for("upload", next="feature_extract"))
+    elif NetType == None:
+        flash("请先选择网络类型!")
+        return redirect(url_for("select_method", next="result_analyse"))
     else:
         netFolder = app.config["NETWORK_FOLDER"]
         current_netFolder = os.path.join(netFolder, NetType)
