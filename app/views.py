@@ -69,8 +69,7 @@ class BaseModel(nn.Module):
 
     @abstractmethod
     def forward(self, x_payload, x_sequence, x_sta):
-        x_payload, x_sequence, x_sta = self.data_trans(x_payload, x_sequence,
-                                                       x_sta)
+        x_payload, x_sequence, x_sta = self.data_trans(x_payload, x_sequence, x_sta)
         # 第一个是分类结果，第二个是重构结果
         return None, None
 
@@ -106,33 +105,27 @@ class Cnn_Lstm(BaseModel):
 
         self.cnn_feature = nn.Sequential(
             # 卷积层1
-            nn.Conv1d(kernel_size=25,
-                      in_channels=1,
-                      out_channels=32,
-                      stride=1,
-                      padding=12),  # (1,1024)->(32,1024)
+            nn.Conv1d(
+                kernel_size=25, in_channels=1, out_channels=32, stride=1, padding=12
+            ),  # (1,1024)->(32,1024)
             nn.BatchNorm1d(32),  # 加上BN的结果
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=3, stride=3,
-                         padding=1),  # (32,1024)->(32,342)
+            nn.MaxPool1d(kernel_size=3, stride=3, padding=1),  # (32,1024)->(32,342)
             # 卷积层2
-            nn.Conv1d(kernel_size=25,
-                      in_channels=32,
-                      out_channels=64,
-                      stride=1,
-                      padding=12),  # (32,342)->(64,342)
+            nn.Conv1d(
+                kernel_size=25, in_channels=32, out_channels=64, stride=1, padding=12
+            ),  # (32,342)->(64,342)
             nn.BatchNorm1d(64),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=3, stride=3,
-                         padding=1),  # (64,342)->(64,114)
+            nn.MaxPool1d(kernel_size=3, stride=3, padding=1),  # (64,342)->(64,114)
         )
         # 全连接层
         self.cnn_classifier = nn.Sequential(
             # 64*114
             nn.Flatten(),
             nn.Linear(
-                in_features=64 * 114,
-                out_features=1024),  # 784:88*64, 1024:114*64, 4096:456*64
+                in_features=64 * 114, out_features=1024
+            ),  # 784:88*64, 1024:114*64, 4096:456*64
         )
 
         self.cnn = nn.Sequential(
@@ -148,7 +141,8 @@ class Cnn_Lstm(BaseModel):
                 num_layers,
                 bidirectional=bidirectional,
                 batch_first=True,
-            ), )
+            ),
+        )
         self.classifier_bi = nn.Sequential(
             nn.Linear(in_features=1024 + hidden_size * 2, out_features=1024),
             nn.Dropout(p=0.7),
@@ -194,7 +188,7 @@ def cnn_lstm(model_path, pretrained=False, **kwargs):
 def hex_to_dec(hex_str, target_length):
     dec_list = []
     for i in range(0, len(hex_str), 2):
-        dec_list.append(int(hex_str[i:i + 2], 16))
+        dec_list.append(int(hex_str[i : i + 2], 16))
     dec_list = pad_or_truncate(dec_list, target_length)
     return dec_list
 
@@ -267,8 +261,7 @@ def getIPLength(pcap_folder, threshold, ip_length, packet_num, byte_num):
         if pcap.endswith(".pcap"):
             pcap = os.path.join(pcap_folder, pcap)
             # 生成ip长度序列seq与负载数据pay
-            pay, seq = get_pay_seq(pcap, threshold, ip_length, packet_num,
-                                   byte_num)
+            pay, seq = get_pay_seq(pcap, threshold, ip_length, packet_num, byte_num)
             if len(pay) == 0:
                 continue
             pay_list.extend(pay)
@@ -285,10 +278,8 @@ def get_tensor_data(pay_data, seq_data, statistic_file):
     else:
         statistic_data = np.random.rand(pay_data.shape[0], pay_data.shape[1])
     # 将 npy 数据转换为 tensor 数据
-    pay_data = torch.from_numpy(pay_data.reshape(-1, 1,
-                                                 pay_data.shape[1])).float()
-    seq_data = torch.from_numpy(seq_data.reshape(-1, seq_data.shape[1],
-                                                 1)).float()
+    pay_data = torch.from_numpy(pay_data.reshape(-1, 1, pay_data.shape[1])).float()
+    seq_data = torch.from_numpy(seq_data.reshape(-1, seq_data.shape[1], 1)).float()
     statistic_data = torch.from_numpy(statistic_data).float()
     return pay_data, seq_data, statistic_data
 
@@ -303,7 +294,7 @@ PCAPS = None  # 数据包
 NetType = None  # 网络类型
 route = None
 flag_patch = 1  # 控制实时抓包的开启
-filename = '123/123.pcap'
+filename = "123/123.pcap"
 # --------------------------------------------------------首页，上传------------
 # 首页
 
@@ -369,7 +360,8 @@ def bgn_fetch():
         with requests.get(url, stream=True) as response:
             with open(filename, "ab") as file:
                 for chunk in response.iter_content(
-                        chunk_size=8192):  # 每次写入 8192 字节
+                    chunk_size=8192
+                ):  # 每次写入 8192 字节
                     if flag_patch == 0:
                         break
                     if chunk:
@@ -402,17 +394,12 @@ def end_fetch():
 @app.route("/real_time_classify/", methods=["POST", "GET"])
 def real_time_classify():
     global filename
-    pred_label_count = {
-        "Adware": 0,
-        "Benign": 0,
-        "Ransom": 0,
-        "Scare": 0,
-        "SMS": 0
-    }
-    filepath = filename.rsplit('/', 1)[0]
+    pred_label_count = {"Adware": 0, "Benign": 0, "Ransom": 0, "Scare": 0, "SMS": 0}
+    filepath = filename.rsplit("/", 1)[0]
     if not os.path.exists(filepath):  # 判断文件夹是否存在
-        return render_template("./DLVisibility/real_time_classify.html",
-                               pred_label_count=pred_label_count)
+        return render_template(
+            "./DLVisibility/real_time_classify.html", pred_label_count=pred_label_count
+        )
     pay, seq = getIPLength(
         filepath,  # cfg.test.traffic_path
         4,  # cfg.preprocess.threshold
@@ -431,8 +418,7 @@ def real_time_classify():
     label2num = {"Adware": 0, "Benign": 1, "Ransom": 2, "Scare": 3, "SMS": 4}
     num_classes = len(label2num)
     # model = cnn_lstm(model_path, pretrained=cfg.test.pretrained, num_classes=num_classes).to(device)
-    model = cnn_lstm(model_path, pretrained=False,
-                     num_classes=num_classes).to(device)
+    model = cnn_lstm(model_path, pretrained=False, num_classes=num_classes).to(device)
 
     index2label = {j: i for i, j in label2num.items()}
     # print(index2label)
@@ -442,8 +428,7 @@ def real_time_classify():
         seq_data=seq,
         statistic_file="None",
     )
-    dataset = torch.utils.data.TensorDataset(pay_data, seq_data,
-                                             statistic_data)
+    dataset = torch.utils.data.TensorDataset(pay_data, seq_data, statistic_data)
     dataloader = torch.utils.data.DataLoader(
         dataset=dataset,
         # batch_size=cfg.train.BATCH_SIZE,
@@ -483,8 +468,9 @@ def real_time_classify():
     for label in pred_label:
         pred_label_count[label] += 1
     print(pred_label_count)
-    return render_template("./DLVisibility/real_time_classify.html",
-                           pred_label_count=pred_label_count)
+    return render_template(
+        "./DLVisibility/real_time_classify.html", pred_label_count=pred_label_count
+    )
 
 
 @app.route("/intro/", methods=["POST", "GET"])
@@ -494,53 +480,54 @@ def intro():
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {app.config['API_KEY']}"
+        "Authorization": f"Bearer {app.config['API_KEY']}",
     }
 
     data = {
-        "max_tokens":
-        1200,
-        "model":
-        app.config["MODEL_NAME"],
-        "temperature":
-        0.8,
-        "top_p":
-        1,
-        "presence_penalty":
-        1,
-        "messages": [{
-            "role":
-            "system",
-            "content":
-            '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文纯文本回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，不要用诸如"根据你提供的信息"之类的陈述性语言,不要使用markdown语法，也不要换行列举。允许你进行大胆的猜想。'
-        }, {
-            "role":
-            "user",
-            "content":
-            f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？'
-        }]
+        "max_tokens": 1200,
+        "model": app.config["MODEL_NAME"],
+        "temperature": 0.8,
+        "top_p": 1,
+        "presence_penalty": 1,
+        "messages": [
+            {
+                "role": "system",
+                "content": '你是一个软件安全和网络安全专家。请你使用通俗易懂的中文纯文本回答以下问题，不要使用比如"可能"或"也许"等不确定性的词，不要用诸如"根据你提供的信息"之类的陈述性语言,不要使用markdown语法，也不要换行列举。允许你进行大胆的猜想。',
+            },
+            {
+                "role": "user",
+                "content": f'我的手机上被安装了一个叫"{app_name}"的恶意应用，这是个什么恶意软件？它会对我的手机造成什么影响？我应该做些什么保护自身手机的安全？',
+            },
+        ],
     }
-    probTexts = ['很可能', '可能', '也许']
+    probTexts = ["很可能", "可能", "也许"]
     try:
-        response = requests.post(app.config["BASE_URL"],
-                                 headers=headers,
-                                 data=json.dumps(data).encode('utf-8'))
+        response = requests.post(
+            app.config["BASE_URL"],
+            headers=headers,
+            data=json.dumps(data).encode("utf-8"),
+        )
     except requests.exceptions.ConnectTimeout:
-        return render_template("./DLVisibility/intro.html",
-                               appname=app_name,
-                               appinfo="请求超时，请检查你的网络")
-    if response.content.decode("utf-8") == 'Authorization':
-        return render_template("./DLVisibility/intro.html",
-                               appname=app_name,
-                               appinfo="API_KEY错误，请检查你的API_KEY")
-    appinfo = json.loads(
-        response.content.decode("utf-8"))["choices"][0]["message"]["content"]
+        return render_template(
+            "./DLVisibility/intro.html",
+            appname=app_name,
+            appinfo="请求超时，请检查你的网络",
+        )
+    if response.content.decode("utf-8") == "Authorization":
+        return render_template(
+            "./DLVisibility/intro.html",
+            appname=app_name,
+            appinfo="API_KEY错误，请检查你的API_KEY",
+        )
+    appinfo = json.loads(response.content.decode("utf-8"))["choices"][0]["message"][
+        "content"
+    ]
 
     for probText in probTexts:
-        appinfo = appinfo.replace(probText, '')
-    return render_template("./DLVisibility/intro.html",
-                           appname=app_name,
-                           appinfo=appinfo)
+        appinfo = appinfo.replace(probText, "")
+    return render_template(
+        "./DLVisibility/intro.html", appname=app_name, appinfo=appinfo
+    )
 
 
 # -------------------------------------------数据分析--------------------------
@@ -594,9 +581,9 @@ def savepdf():
         flash("请先上传要分析的数据包!")
         return redirect(url_for("upload", next="savepdf"))
     else:
-        return send_from_directory(app.config["PDF_FOLDER"],
-                                   PDF_NAME,
-                                   as_attachment=True)
+        return send_from_directory(
+            app.config["PDF_FOLDER"], PDF_NAME, as_attachment=True
+        )
 
 
 # 协议分析
@@ -610,9 +597,7 @@ def protoanalyzer():
         pcap_len_dict = pcap_len_statistic(PCAPS)
         pcap_count_dict = most_proto_statistic(PCAPS, PD)
         http_dict = http_statistic(PCAPS)
-        http_dict = sorted(http_dict.items(),
-                           key=lambda d: d[1],
-                           reverse=False)
+        http_dict = sorted(http_dict.items(), key=lambda d: d[1], reverse=False)
         http_key_list = list()
         http_value_list = list()
         for key, value in http_dict:
@@ -651,9 +636,9 @@ def flowanalyzer():
         data_ip_dict = data_in_out_ip(PCAPS, host_ip)
         proto_flow_dict = proto_flow(PCAPS)
         most_flow_dict = most_flow_statistic(PCAPS, PD)
-        most_flow_dict = sorted(most_flow_dict.items(),
-                                key=lambda d: d[1],
-                                reverse=True)
+        most_flow_dict = sorted(
+            most_flow_dict.items(), key=lambda d: d[1], reverse=True
+        )
         if len(most_flow_dict) > 10:
             most_flow_dict = most_flow_dict[0:10]
         most_flow_key = list()
@@ -702,9 +687,9 @@ def get_workflow():
     filename = request.args.get("filename")
     allowed_files = []
     if filename in allowed_files:
-        return send_from_directory(app.config["WORKFLOW_FOLDER"],
-                                   filename,
-                                   as_attachment=True)
+        return send_from_directory(
+            app.config["WORKFLOW_FOLDER"], filename, as_attachment=True
+        )
     else:
         return render_template("./error/404.html")
 
@@ -778,8 +763,9 @@ def ipmap():
             geo_dict = ipdata[0]
             ip_value_list = ipdata[1]
             myip_geo = get_geo(myip)
-            ip_value_list = [(list(d.keys())[0], list(d.values())[0])
-                             for d in ip_value_list]
+            ip_value_list = [
+                (list(d.keys())[0], list(d.values())[0]) for d in ip_value_list
+            ]
             return render_template(
                 "./dataanalyzer/ipmap.html",
                 geo_data=geo_dict,
@@ -893,14 +879,9 @@ def log_view():
             # match all simple log & add to logList
             log = []
             for res in re.findall(regex, logText):
-                log.append({
-                    "time": res[0],
-                    "level": res[1],
-                    "content": res[2]
-                })
+                log.append({"time": res[0], "level": res[1], "content": res[2]})
     dispName = {
-        "time":
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日志时间&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+        "time": "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日志时间&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
         "level": "&nbsp;&nbsp;日志等级&nbsp;&nbsp;",
         "content": "内容",
     }
@@ -930,23 +911,20 @@ def feature_extract():
                 f'bash "{cfm_path}" "{pcap_path}" "{csv_path}" 1> /dev/null 2> /dev/null'
             )
         else:
-            os.system(
-                f'call "{cfm_path}" "{pcap_path}" "{csv_path}" 1> nul 2> nul')
+            os.system(f'call "{cfm_path}" "{pcap_path}" "{csv_path}" 1> nul 2> nul')
 
         analysed_data = []
         for root, dirs, files in os.walk(csv_path):
             for file in files:
                 if file.endswith(".csv"):
-                    with open(os.path.join(root, file), "r",
-                              encoding="utf-8") as f:
+                    with open(os.path.join(root, file), "r", encoding="utf-8") as f:
                         titles = f.readline().strip().split(",")
                         for line in f.readlines():
                             item = line.strip().split(",")
                             if len(item) > 0:
                                 analysed_data.append(dict(zip(titles, item)))
         dispName = {
-            "Flow ID":
-            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;流ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+            "Flow ID": "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;流ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
             "Src IP": "源IP",
             "Src Port": "源端口",
             "Dst IP": "目的IP",
@@ -1052,9 +1030,6 @@ def flow_analyse():
     if PCAPS == None:
         flash("请先选择PCAP包!")
         return redirect(url_for("upload", next="feature_extract"))
-    elif NetType == None:
-        flash("请先选择网络类型!")
-        return redirect(url_for("select_method", next="result_analyse"))
     else:
         netFolder = app.config["NETWORK_FOLDER"]
         current_netFolder = os.path.join(netFolder, NetType)
@@ -1062,17 +1037,19 @@ def flow_analyse():
         pcaps = get_all_pcap(PCAPS, PD)
         flow = []
         for count, pcap in pcaps.items():
-            flow.append({
-                'id': count,
-                'source': pcap['type'],
-                'src_ip': pcap['Source'].split(':')[0],
-                'dst_ip': pcap['Destination'].split(':')[0],
-                'proto': pcap['Procotol'],
-                'sport': pcap['Source'].split(':')[1],
-                'dport': pcap['Destination'].split(':')[1],
-                'len': pcap['len'],
-                'time': pcap['time']
-            })
+            flow.append(
+                {
+                    "id": count,
+                    "source": pcap["type"],
+                    "src_ip": pcap["Source"].split(":")[0],
+                    "dst_ip": pcap["Destination"].split(":")[0],
+                    "proto": pcap["Procotol"],
+                    "sport": pcap["Source"].split(":")[1],
+                    "dport": pcap["Destination"].split(":")[1],
+                    "len": pcap["len"],
+                    "time": pcap["time"],
+                }
+            )
         with open(analysed_json, "w", encoding="utf-8") as f:
             json.dump(flow, f)
         if not os.path.exists(current_netFolder):
@@ -1084,9 +1061,9 @@ def flow_analyse():
             else:
                 source_dict[data["source"]][0] += 1
                 source_dict[data["source"]][1].append(data)
-        return render_template("./DLVisibility/flow_analyse.html",
-                               data_flow=flow,
-                               source_dict=source_dict)
+        return render_template(
+            "./DLVisibility/flow_analyse.html", data_flow=flow, source_dict=source_dict
+        )
 
 
 # result_analyse
@@ -1098,25 +1075,38 @@ def result_analyse():
     else:
         netFolder = app.config["NETWORK_FOLDER"]
         current_netFolder = os.path.join(netFolder, NetType)
-        ACC_json = os.path.join(current_netFolder, "ACC结果分析.json")
+        acc_loss_json = os.path.join(current_netFolder, "acc_loss.json")
         if not os.path.exists(current_netFolder):
             os.makedirs(current_netFolder)
-        if not os.path.exists(ACC_json):
-            ACC = [[0, 0], [1, 0.7], [2, 0.85], [3, 0.9], [6, 0.95]]
-            with open(ACC_json, "w", encoding="utf-8") as f:
-                json.dump(ACC, f)
+        if not os.path.exists(acc_loss_json):
+            acc_loss = {
+                "0": {
+                    "train_loss": 1.2796458005905151,
+                    "train_acc": 56.0,
+                    "val_loss": 0.9397998452186584,
+                    "val_acc": 71.42857360839844,
+                    "best_prec1": 39.14848889889128,
+                },
+                "1": {
+                    "train_loss": 1.0930438041687012,
+                    "train_acc": 48.0,
+                    "val_loss": 0.943209707736969,
+                    "val_acc": 57.14285659790039,
+                    "best_prec1": 46.54633222163925,
+                }
+            }
+            with open(acc_loss_json, "w", encoding="utf-8") as f:
+                json.dump(acc_loss, f)
         else:
-            with open(ACC_json, "r", encoding="utf-8") as f:
-                ACC = json.load(f)
-
-        loss_json = os.path.join(current_netFolder, "loss结果分析.json")
-        if not os.path.exists(loss_json):
-            loss = [[0, 6], [1, 3], [2, 1.5], [6, 1]]
-            with open(loss_json, "w", encoding="utf-8") as f:
-                json.dump(loss, f)
-        else:
-            with open(loss_json, "r", encoding="utf-8") as f:
-                loss = json.load(f)
+            with open(acc_loss_json, "r", encoding="utf-8") as f:
+                acc_loss = json.load(f)
+        
+        # Turn acc_loss into ACC and loss
+        ACC = []
+        loss = []
+        for key, value in acc_loss.items():
+            ACC.append([int(key), value["val_acc"]])
+            loss.append([int(key), value["val_loss"]])
 
         mixmatrix_json = os.path.join(current_netFolder, "混淆矩阵结果分析.json")
         if not os.path.exists(mixmatrix_json):
@@ -1127,9 +1117,7 @@ def result_analyse():
         else:
             with open(mixmatrix_json, "r", encoding="utf-8") as f:
                 mixmatrix = json.load(f)
-        nums = [
-            mixmatrix[0][2], mixmatrix[1][2], mixmatrix[2][2], mixmatrix[3][2]
-        ]
+        nums = [mixmatrix[0][2], mixmatrix[1][2], mixmatrix[2][2], mixmatrix[3][2]]
         minn = min(nums)
         maxn = max(nums)
         return render_template(
@@ -1139,6 +1127,7 @@ def result_analyse():
             mixmatrix=mixmatrix,
             min=minn,
             max=maxn,
+            fix=0,
         )
 
 
@@ -1148,29 +1137,22 @@ def select_method():
     global route
     methods = {
         "cnn1d": {
-            "name":
-            "一维卷积神经网络",
-            "description":
-            "一维卷积神经网络（1D CNN）主要用于处理具有时间序列结构的数据，如语音信号、文本数据等。它通过卷积核在输入数据上滑动，提取局部的特征。",
+            "name": "一维卷积神经网络",
+            "description": "一维卷积神经网络（1D CNN）主要用于处理具有时间序列结构的数据，如语音信号、文本数据等。它通过卷积核在输入数据上滑动，提取局部的特征。",
         },
         "cnn2d": {
-            "name":
-            "二维卷积神经网络",
-            "description":
-            "二维卷积神经网络（2D CNN）广泛应用于图像处理领域，如图像分类、物体检测等。它能够在二维空间上提取图像的局部特征，并保持空间关系。",
+            "name": "二维卷积神经网络",
+            "description": "二维卷积神经网络（2D CNN）广泛应用于图像处理领域，如图像分类、物体检测等。它能够在二维空间上提取图像的局部特征，并保持空间关系。",
         },
         "cnn_lstm": {
-            "name":
-            "长短期记忆卷积神经网络",
-            "description":
-            "长短期记忆卷积神经网络（CNN-LSTM）结合了卷积神经网络（CNN）和长短期记忆网络（LSTM）。CNN 用于提取局部特征，LSTM 用于处理时间序列数据。这种结构常用于视频处理和自然语言处理等任务。",
+            "name": "长短期记忆卷积神经网络",
+            "description": "长短期记忆卷积神经网络（CNN-LSTM）结合了卷积神经网络（CNN）和长短期记忆网络（LSTM）。CNN 用于提取局部特征，LSTM 用于处理时间序列数据。这种结构常用于视频处理和自然语言处理等任务。",
         },
     }
     type_value = request.form.get("type")
     if request.method == "GET":
         route = request.args.get("next")
-        return render_template("./DLVisibility/select_method.html",
-                               methods=methods)
+        return render_template("./DLVisibility/select_method.html", methods=methods)
     elif request.method == "POST":
         global NetType
         if type_value == "cnn1d":
@@ -1190,8 +1172,7 @@ def select_method():
                 return redirect(url_for(route))
         else:
             flash("请选择一个方法")
-        return render_template("./DLVisibility/select_method.html",
-                               methods=methods)
+        return render_template("./DLVisibility/select_method.html", methods=methods)
 
 
 # ----------------------------------------------数据提取页面---------------------------------------------
@@ -1209,11 +1190,9 @@ def webdata():
         host_ip = get_host_ip(PCAPS)
         webdata_list = web_data(PCAPS, host_ip)
         if dataid:
-            return webdata_list[int(dataid) - 1]["data"].replace(
-                "\r\n", "<br>")
+            return webdata_list[int(dataid) - 1]["data"].replace("\r\n", "<br>")
         else:
-            return render_template("./dataextract/webdata.html",
-                                   webdata=webdata_list)
+            return render_template("./dataextract/webdata.html", webdata=webdata_list)
 
 
 # Mail数据
@@ -1235,14 +1214,14 @@ def maildata():
             raw_data = mailata_list[int(dataid) - 1]["data"]
             with open(filepath + "raw_data.txt", "w", encoding="UTF-8") as f:
                 f.write(raw_data)
-            return send_from_directory(filepath,
-                                       "raw_data.txt",
-                                       as_attachment=True)
+            return send_from_directory(filepath, "raw_data.txt", as_attachment=True)
         if filename and dataid:
-            filename_ = (hashlib.md5(filename.encode("UTF-8")).hexdigest() +
-                         "." + filename.split(".")[-1])
-            attachs_dict = mailata_list[int(dataid) -
-                                        1]["parse_data"]["attachs_dict"]
+            filename_ = (
+                hashlib.md5(filename.encode("UTF-8")).hexdigest()
+                + "."
+                + filename.split(".")[-1]
+            )
+            attachs_dict = mailata_list[int(dataid) - 1]["parse_data"]["attachs_dict"]
             mode = "wb"
             encoding = None
             if isinstance(attachs_dict[filename], str):
@@ -1258,12 +1237,11 @@ def maildata():
             # return mailata_list[int(dataid)-1]['data'].replace('\r\n',
             # '<br>')
             maildata = mailata_list[int(dataid) - 1]["parse_data"]
-            return render_template("./dataextract/mailparsedata.html",
-                                   maildata=maildata,
-                                   dataid=dataid)
+            return render_template(
+                "./dataextract/mailparsedata.html", maildata=maildata, dataid=dataid
+            )
         else:
-            return render_template("./dataextract/maildata.html",
-                                   maildata=mailata_list)
+            return render_template("./dataextract/maildata.html", maildata=mailata_list)
 
 
 # FTP数据
@@ -1277,11 +1255,9 @@ def ftpdata():
         host_ip = get_host_ip(PCAPS)
         ftpdata_list = telnet_ftp_data(PCAPS, host_ip, 21)
         if dataid:
-            return ftpdata_list[int(dataid) - 1]["data"].replace(
-                "\r\n", "<br>")
+            return ftpdata_list[int(dataid) - 1]["data"].replace("\r\n", "<br>")
         else:
-            return render_template("./dataextract/ftpdata.html",
-                                   ftpdata=ftpdata_list)
+            return render_template("./dataextract/ftpdata.html", ftpdata=ftpdata_list)
 
 
 # Telnet数据
@@ -1295,11 +1271,11 @@ def telnetdata():
         host_ip = get_host_ip(PCAPS)
         telnetdata_list = telnet_ftp_data(PCAPS, host_ip, 23)
         if dataid:
-            return telnetdata_list[int(dataid) - 1]["data"].replace(
-                "\r\n", "<br>")
+            return telnetdata_list[int(dataid) - 1]["data"].replace("\r\n", "<br>")
         else:
-            return render_template("./dataextract/telnetdata.html",
-                                   telnetdata=telnetdata_list)
+            return render_template(
+                "./dataextract/telnetdata.html", telnetdata=telnetdata_list
+            )
 
 
 # 客户端信息
@@ -1310,8 +1286,9 @@ def clientinfo():
         return redirect(url_for("upload", next="clientinfo"))
     else:
         clientinfo_list = client_info(PCAPS)
-        return render_template("./dataextract/clientinfo.html",
-                               clientinfos=clientinfo_list)
+        return render_template(
+            "./dataextract/clientinfo.html", clientinfos=clientinfo_list
+        )
 
 
 # 敏感数据
@@ -1325,11 +1302,9 @@ def sendata():
         host_ip = get_host_ip(PCAPS)
         sendata_list = sen_data(PCAPS, host_ip)
         if dataid:
-            return sendata_list[int(dataid) - 1]["data"].replace(
-                "\r\n", "<br>")
+            return sendata_list[int(dataid) - 1]["data"].replace("\r\n", "<br>")
         else:
-            return render_template("./dataextract/sendata.html",
-                                   sendata=sendata_list)
+            return render_template("./dataextract/sendata.html", sendata=sendata_list)
 
 
 # ----------------------------------------------一异常信息页面---------------------------------------------
@@ -1347,13 +1322,11 @@ def exceptinfo():
         warning_list = exception_warning(PCAPS, host_ip)
         if dataid:
             if warning_list[int(dataid) - 1]["data"]:
-                return warning_list[int(dataid) - 1]["data"].replace(
-                    "\r\n", "<br>")
+                return warning_list[int(dataid) - 1]["data"].replace("\r\n", "<br>")
             else:
                 return "<center><h3>无相关数据包详情</h3></center>"
         else:
-            return render_template("./exceptions/exception.html",
-                                   warning=warning_list)
+            return render_template("./exceptions/exception.html", warning=warning_list)
 
 
 # ----------------------------------------------文件提取---------------------------------------------
@@ -1376,13 +1349,15 @@ def webfile():
             file_dict[os.path.split(web["filename"])[-1]] = web["filename"]
         file = request.args.get("file")
         if file in file_dict:
-            filename = (hashlib.md5(file.encode("UTF-8")).hexdigest() + "." +
-                        file.split(".")[-1])
+            filename = (
+                hashlib.md5(file.encode("UTF-8")).hexdigest()
+                + "."
+                + file.split(".")[-1]
+            )
             os.rename(filepath + file, filepath + filename)
             return send_from_directory(filepath, filename, as_attachment=True)
         else:
-            return render_template("./fileextract/webfile.html",
-                                   web_list=web_list)
+            return render_template("./fileextract/webfile.html", web_list=web_list)
 
 
 # Mail文件提取
@@ -1404,13 +1379,15 @@ def mailfile():
             file_dict[os.path.split(mail["filename"])[-1]] = mail["filename"]
         file = request.args.get("file")
         if file in file_dict:
-            filename = (hashlib.md5(file.encode("UTF-8")).hexdigest() + "." +
-                        file.split(".")[-1])
+            filename = (
+                hashlib.md5(file.encode("UTF-8")).hexdigest()
+                + "."
+                + file.split(".")[-1]
+            )
             os.rename(filepath + file, filepath + filename)
             return send_from_directory(filepath, filename, as_attachment=True)
         else:
-            return render_template("./fileextract/mailfile.html",
-                                   mail_list=mail_list)
+            return render_template("./fileextract/mailfile.html", mail_list=mail_list)
 
 
 # FTP文件提取
@@ -1430,13 +1407,15 @@ def ftpfile():
             file_dict[os.path.split(ftp["filename"])[-1]] = ftp["filename"]
         file = request.args.get("file")
         if file in file_dict:
-            filename = (hashlib.md5(file.encode("UTF-8")).hexdigest() + "." +
-                        file.split(".")[-1])
+            filename = (
+                hashlib.md5(file.encode("UTF-8")).hexdigest()
+                + "."
+                + file.split(".")[-1]
+            )
             os.rename(filepath + file, filepath + filename)
             return send_from_directory(filepath, filename, as_attachment=True)
         else:
-            return render_template("./fileextract/ftpfile.html",
-                                   ftp_list=ftp_list)
+            return render_template("./fileextract/ftpfile.html", ftp_list=ftp_list)
 
 
 # 所有二进制文件提取
@@ -1454,13 +1433,17 @@ def allfile():
         allfiles_dict = all_files(PCAPS, filepath)
         file = request.args.get("file")
         if file in allfiles_dict:
-            filename = (hashlib.md5(file.encode("UTF-8")).hexdigest() + "." +
-                        file.split(".")[-1])
+            filename = (
+                hashlib.md5(file.encode("UTF-8")).hexdigest()
+                + "."
+                + file.split(".")[-1]
+            )
             os.rename(filepath + file, filepath + filename)
             return send_from_directory(filepath, filename, as_attachment=True)
         else:
-            return render_template("./fileextract/allfile.html",
-                                   allfiles_dict=allfiles_dict)
+            return render_template(
+                "./fileextract/allfile.html", allfiles_dict=allfiles_dict
+            )
 
 
 # ----------------------------------------------错误处理页面---------------------------------------------

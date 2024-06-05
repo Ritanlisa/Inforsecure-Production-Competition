@@ -17,13 +17,12 @@
 <body>
     <br>
     <!--ACC曲线图和loss曲线图-->
-    <div class="container" style="display: flex; justify-content: space-between;">
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <div id="ACC_curve" style="height: 400px;width: 400px;"></div>
-            <br>
-            <div id="mix_matrix" style="height: 400px;width: 400px;"></div>
-        </div>
-        <div id="loss_curve" style="height: 400px;width: 400px;"></div>
+    <div class="container" style="display: block; justify-content: space-between; width: 80%;">
+        <div id="ACC_curve" style="height: 400px;width: 100%;"></div>
+        <br>
+        <div id="loss_curve" style="height: 400px;width: 100%;"></div>
+        <br>
+        <div id="mix_matrix" style="height: 400px;width: 400px;"></div>
     </div>
     {% autoescape false %}
     <!-- ECharts单文件引入 -->
@@ -53,7 +52,7 @@
                 {
                     type: 'value',
                     min: 0.0000,
-                    max: 1.0000
+                    max: 100.0000
                 }
             ],
             series: [
@@ -63,7 +62,12 @@
                     smooth: true,
                     itemStyle: {
                         normal: {
-                            label: { show: true },
+                            label: { 
+                                show: true,
+                                formatter: function(params) {
+                                    return params.value[1].toFixed({{fix}}); // 保留两位小数
+                                }
+                            },
                             color: '#6495ed', //图例颜色设置
                         },
                         emphasis: { label: { show: true } }
@@ -108,7 +112,12 @@
                     smooth: true,
                     itemStyle: {
                         normal: {
-                            label: { show: true },
+                            label: { 
+                                show: true,
+                                formatter: function(params) {
+                                    return params.value[1].toFixed({{fix}}); // 保留两位小数
+                                }
+                            },
                             color: '#6495ed', //图例颜色设置
                         },
                         emphasis: { label: { show: true } }
