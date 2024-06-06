@@ -476,7 +476,7 @@ def real_time_classify():
 @app.route("/intro/", methods=["POST", "GET"])
 def intro():
     # 获得应用名称
-    app_name = "政府免息贷款平台"  # 示例恶意应用名称
+    app_name = "Dowgin"  # 示例恶意应用名称
 
     headers = {
         "Content-Type": "application/json",
@@ -525,6 +525,7 @@ def intro():
 
     for probText in probTexts:
         appinfo = appinfo.replace(probText, "")
+    appinfo = f'系统检测到你的手机存在恶意应用"{app_name}"' + appinfo.strip()
     return render_template(
         "./DLVisibility/intro.html", appname=app_name, appinfo=appinfo
     )
