@@ -525,7 +525,7 @@ def intro():
 
     for probText in probTexts:
         appinfo = appinfo.replace(probText, "")
-    appinfo = f'系统检测到你的手机存在恶意应用"{app_name}"' + appinfo.strip()
+    appinfo = f'系统检测到你的手机存在恶意应用"{app_name}",' + appinfo.strip()
     return render_template(
         "./DLVisibility/intro.html", appname=app_name, appinfo=appinfo
     )
