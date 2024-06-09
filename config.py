@@ -8,7 +8,7 @@ WTF_CSRF_ENABLED = False
 SECRET_KEY = '!@#$%8F6F98EC3684AECA1DC44E1CB816E4A5^&*()'
 
 # OpenAI API Settings
-API_KEY = 'PUT_YOUR_API_KEY_HERE'
+API_KEY = 'IMPUT_YOUR_API_KEY_HERE'
 BASE_URL = 'https://api.openai.com/v1/chat/completions'
 MODEL_NAME = 'gpt-3.5-turbo-1106'
 
@@ -21,7 +21,7 @@ FILE_FOLDER = 'tmp/Files/'
 PDF_FOLDER = 'tmp/Files/PDF/'
 CSV_FOLDER = 'tmp/Files/csv/'
 NETWORK_FOLDER = 'network/'
-CICFLOWMETER_PATH = 'CICFlowMeter-4.0/CICFlowMeter-4.0/bin'
+CICFLOWMETER_PATH = 'CICFlowMeter-4.0/bin'
 LOG_FOLDER = 'logs/'
 
 UPLOAD_FOLDER = os.path.join(basedir, UPLOAD_FOLDER)
