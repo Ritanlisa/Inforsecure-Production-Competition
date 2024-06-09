@@ -702,7 +702,7 @@ def bug_detect():
         "./DLVisibility/bug_detect.html",
         webdata=[
             [
-                "2020/08/24 19:25:37",
+                "2024/05/24 17:22:05",
                 "192.168.43.119",
                 "192.168.43.23",
                 "8088",
@@ -713,7 +713,7 @@ def bug_detect():
                 "../file1",
             ],
             [
-                "2020/08/24 19:26:13",
+                "2024/05/24 19:26:13",
                 "192.168.43.132",
                 "192.168.43.23",
                 "8086",
@@ -724,7 +724,7 @@ def bug_detect():
                 "../file2",
             ],
             [
-                "2020/08/24 19:27:10",
+                "2024/05/24 19:27:10",
                 "192.168.43.141",
                 "192.168.43.23",
                 "8086",
@@ -735,7 +735,7 @@ def bug_detect():
                 "../file3",
             ],
             [
-                "2020/08/29 19:29:05",
+                "2024/05/29 19:29:05",
                 "192.168.43.85",
                 "192.168.43.23",
                 "3600",
@@ -903,6 +903,8 @@ def feature_extract():
     else:
         pcap_path = os.path.join(app.config["UPLOAD_FOLDER"], PCAP_NAME)
         cfm_path = os.path.join(app.config["CICFLOWMETER_PATH"], "cfm.bat")
+        if not os.path.exists(cfm_path):
+            raise FileNotFoundError("CICFlowMeter not found!")
         csv_path = app.config["CSV_FOLDER"]
         if not os.path.exists(csv_path):
             os.makedirs(csv_path)
@@ -912,7 +914,8 @@ def feature_extract():
                 f'bash "{cfm_path}" "{pcap_path}" "{csv_path}" 1> /dev/null 2> /dev/null'
             )
         else:
-            os.system(f'call "{cfm_path}" "{pcap_path}" "{csv_path}" 1> nul 2> nul')
+            # os.system(f'call "{cfm_path}" "{pcap_path}" "{csv_path}" 1> nul 2> nul')
+            os.system(f'call "{cfm_path}" "{pcap_path}" "{csv_path}"')
 
         analysed_data = []
         for root, dirs, files in os.walk(csv_path):
@@ -1033,8 +1036,7 @@ def flow_analyse():
         return redirect(url_for("upload", next="feature_extract"))
     else:
         netFolder = app.config["NETWORK_FOLDER"]
-        current_netFolder = os.path.join(netFolder, NetType)
-        analysed_json = os.path.join(current_netFolder, "流量分类.json")
+        analysed_json = os.path.join(netFolder, "流量分类.json")
         pcaps = get_all_pcap(PCAPS, PD)
         flow = []
         for count, pcap in pcaps.items():
@@ -1045,16 +1047,16 @@ def flow_analyse():
                     "src_ip": pcap["Source"].split(":")[0],
                     "dst_ip": pcap["Destination"].split(":")[0],
                     "proto": pcap["Procotol"],
-                    "sport": pcap["Source"].split(":")[1],
-                    "dport": pcap["Destination"].split(":")[1],
+                    "sport": "未知" if len(pcap["Source"].split(":"))==0 else pcap["Source"].split(":")[1],
+                    "dport": "未知" if len(pcap["Destination"].split(":"))==0 else pcap["Destination"].split(":")[1],
                     "len": pcap["len"],
                     "time": pcap["time"],
                 }
             )
         with open(analysed_json, "w", encoding="utf-8") as f:
             json.dump(flow, f)
-        if not os.path.exists(current_netFolder):
-            os.makedirs(current_netFolder)
+        if not os.path.exists(netFolder):
+            os.makedirs(netFolder)
         source_dict = dict()
         for data in flow:
             if data["source"] not in source_dict:

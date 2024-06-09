@@ -1,0 +1,1 @@
+./cfm.bat C:/Users/deeprain/Desktop/DeepRain/Work/Jupiter/app/pcaps/pcap/2.pcap C:/Users/deeprain/Desktop/DeepRain/Work/Jupiter/app/model/blue/csv/
